@@ -1,0 +1,94 @@
+version: "3"  # Define a versão do Docker Compose
+
+services:  # Define os serviços que serão executados
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0  # Imagem do Elasticsearch
+    container_name: elasticsearch  # Nome do container
+    environment:  # Configurações de ambiente para o Elasticsearch
+      - node.name=elasticsearch  # Nome do nó
+      - cluster.name=es-docker-cluster  # Nome do cluster
+      - bootstrap.memory_lock=true  # Impede que o processo do Elasticsearch seja swapado
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # Define o uso de memória para a JVM (mínimo e máximo 512MB)
+      - http.cors.enabled=true  # Habilita CORS
+      - http.cors.allow-origin="*"  # Permite requisições de qualquer origem (CORS)
+      - discovery.type=single-node  # Configura o Elasticsearch como um nó único
+    ulimits:
+      memlock:  # Ajustes de limites de memória
+        soft: -1  # Limite suave indefinido (sem limite)
+        hard: -1  # Limite duro indefinido (sem limite)
+    volumes:
+      - ./elasticsearch_data:/usr/share/elasticsearch/data  # Monta um volume para persistência de dados
+    ports:
+      - 9200:9200  # Mapeia a porta 9200 do container para a porta 9200 da máquina host (acesso ao Elasticsearch)
+    networks: 
+      - observabilidade  # Define a rede para comunicação com outros serviços
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0  # Imagem do Kibana
+    container_name: kibana  # Nome do container
+    ports:
+      - 5601:5601  # Mapeia a porta 5601 para acessar o Kibana no host
+    environment:  # Configurações de ambiente do Kibana
+      ELASTICSEARCH_URL: http://elasticsearch:9200  # URL do Elasticsearch
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'  # Lista de hosts do Elasticsearch
+    networks: 
+      - observabilidade  # Usa a mesma rede para comunicação com o Elasticsearch
+
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:7.17.0  # Imagem do Metricbeat para monitoramento de métricas
+    container_name: metricbeat  # Nome do container
+    environment:  # Configurações de ambiente do Kibana
+      - BEAT_STRICT_PERMS=false # Acessar as configurações sem restringir permissão de usuário
+      # - BEAT_STRICT_PERMS=2 # Caso a configuração não suba os containers por conta de versão do docker
+    user: "root:root"  # Executa o container como root
+    volumes:  # Volumes montados para acessar o Docker Socket e o arquivo de configuração
+      - /var/run/docker.sock:/var/run/docker.sock  # Permite o Metricbeat monitorar contêineres Docker
+      - ./beats/metric/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml  # Arquivo de configuração do Metricbeat
+    restart: on-failure  # Reinicia o container em caso de falha
+    networks: 
+      - observabilidade  # Usa a rede "observabilidade"
+
+  heartbeat:
+    image: docker.elastic.co/beats/heartbeat:7.17.0  # Imagem do Heartbeat para monitoramento de uptime
+    user: "root:root"  # Executa o container como root
+    container_name: heartbeat  # Nome do container
+    volumes:      
+      - ./beats/heartbeat/heartbeat.yml:/usr/share/heartbeat/heartbeat.yml  # Monta o arquivo de configuração do Heartbeat
+    environment: 
+      - setup.kibana.host=kibana:5601  # Define o Kibana como host para o setup do Heartbeat
+      - BEAT_STRICT_PERMS=false # Acessar as configurações sem restringir permissão de usuário
+      # - BEAT_STRICT_PERMS=2 # Caso a configuração não suba os containers por conta de versão do docker
+    networks: 
+      - observabilidade  # Usa a rede "observabilidade"
+
+  apm:
+    image: docker.elastic.co/apm/apm-server-oss:7.17.0  # Imagem do APM Server para monitoramento de performance
+    container_name: apm  # Nome do container
+    user: "root:root"  # Executa o container como root
+    volumes:      
+      - ./apm/apm-server.yml:/usr/share/apm-server/apm-server.yml  # Monta o arquivo de configuração do APM
+    environment:  # Configurações de ambiente do apm
+      - BEAT_STRICT_PERMS=false # Acessar as configurações sem restringir permissão de usuário
+      # - BEAT_STRICT_PERMS=2 # Caso a configuração não suba os containers por conta de versão do docker
+    ports:
+      - "8200:8200"  # Mapeia a porta 8200 para o APM server
+    restart: on-failure  # Reinicia o container em caso de falha
+    networks: 
+      - observabilidade  # Usa a rede "observabilidade"
+
+  elastalert:
+    image: jertel/elastalert2  # Imagem do ElastAlert para alertas baseados em dados do Elasticsearch
+    container_name: elastalert  # Nome do container
+    volumes:
+      - ./elastalert/elastalert.yaml:/opt/elastalert/config.yaml  # Monta o arquivo de configuração do ElastAlert
+      - ./elastalert/rules:/opt/elastalert/rules  # Monta o diretório contendo as regras do ElastAlert
+    depends_on:
+      - elasticsearch  # Define dependência do serviço Elasticsearch
+    restart: on-failure  # Reinicia o container em caso de falha
+    networks:
+      - observabilidade  # Usa a rede "observabilidade"
+
+networks:
+  observabilidade:
+    external: true  # Usa uma rede externa chamada "observabilidade" para que todos os serviços possam se comunicar

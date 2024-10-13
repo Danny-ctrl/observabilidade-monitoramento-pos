@@ -1,0 +1,44 @@
+# ============================== Configuração dos Módulos do Metricbeat ==============================
+
+metricbeat.modules:
+  # Módulo para coletar métricas do Docker
+  - module: docker
+    metricsets: [
+        "container", # Métricas sobre contêineres Docker
+        "cpu", # Métricas de uso de CPU dos contêineres
+        "diskio", # Métricas de I/O de disco dos contêineres
+        "event", # Métricas de eventos do Docker
+        "healthcheck", # Métricas de verificação de saúde dos contêineres
+        "image", # Métricas sobre imagens Docker
+        "info", # Informações gerais sobre o Docker
+        "memory", # Métricas de uso de memória dos contêineres
+        "network", # Métricas de rede dos contêineres
+      ]
+    hosts: ["unix:///var/run/docker.sock"] # Endereço do socket Docker para comunicação
+    period: 10s # Define a frequência de coleta das métricas (a cada 10 segundos)
+
+  # Módulo para coletar métricas do Elasticsearch
+  - module: elasticsearch
+    metricsets: ["node", "node_stats", "cluster_stats", "index"] # Tipos de métricas coletadas do Elasticsearch
+    period: 10s # Define a frequência de coleta das métricas (a cada 10 segundos)
+    hosts: ["elasticsearch:9200"] # URL da instância Elasticsearch para coleta das métricas
+
+# ============================== Configuração do Output ==============================
+
+# Configure o output para o Elasticsearch, onde os dados serão enviados.
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"] # URL da instância Elasticsearch onde os dados serão enviados
+
+# ============================== Configuração do Kibana ==============================
+
+# Configure o Kibana para visualizar os dados do Metricbeat.
+
+setup.kibana:
+  host: "kibana:5601" # URL da instância Kibana
+
+# ============================== Configuração dos Painéis ==============================
+
+# Habilita a configuração automática dos dashboards no Kibana.
+
+setup.dashboards.enabled: true # Ativa a configuração automática dos dashboards do Metricbeat no Kibana

@@ -1,0 +1,112 @@
+version: "3"
+
+# declaração dos serviços
+services:
+  # nome do serviço da aplicação backend
+  app:
+    # nome do container do backend
+    container_name: app
+    # diretório onde o Dockerfile do backend está localizado para fazer o build e gerar a imagem da aplicação
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # variáveis de ambiente para configurar a conexão com o banco de dados
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}   # endereço do host do PostgreSQL
+      - POSTGRES_USER=${POSTGRES_USER}   # usuário do banco de dados PostgreSQL
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # senha do banco de dados PostgreSQL
+      - POSTGRES_DB=${POSTGRES_DB}       # nome do banco de dados PostgreSQL
+    # volumes compartilhados entre a máquina local e o container do backend
+    volumes:
+      - ./backend/app:/src/app  # mapeia o diretório local do app para o diretório no container
+    # mapeamento de portas: expõe a porta 8000 da máquina local para a porta 8000 do container
+    ports:
+      - "8000:8000"
+    # diretório padrão de trabalho dentro do container
+    working_dir: /src
+    # comando a ser executado quando o container for iniciado
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # política de reinicialização do container: "always" garante que o container será reiniciado em caso de falha
+    restart: always
+    # define a network docker que o container fará parte
+    networks: 
+      - observabilidade
+    # define dependências para garantir que o serviço db esteja disponível antes do backend iniciar
+    depends_on:
+      - db
+
+  # nome do serviço do frontend
+  frontend:
+    # nome do container do frontend
+    container_name: frontend
+    # diretório onde o Dockerfile do frontend está localizado para fazer o build e gerar a imagem
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    # volumes compartilhados entre a máquina local e o container do frontend
+    volumes:
+      - dependencias_frontend:/src/node_modules  # volume persistente para node_modules
+      - ./frontend:/src  # mapeia o diretório do frontend local para o container
+    # mapeamento de portas: expõe a porta 3000 da máquina local para a porta 3000 do container
+    ports:
+      - "3000:3000"
+    # comando a ser executado quando o container for iniciado
+    command: npm run dev
+    # define a network docker que o container fará parte
+    networks: 
+      - observabilidade
+
+  # nome do serviço NGINX
+  nginx:
+    # diretório onde o Dockerfile do NGINX está localizado para fazer o build
+    build: ../nginx
+    # nome do container do NGINX
+    container_name: nginx
+    # mapeamento de portas: expõe a porta 9000 da máquina local para a porta 80 do container (porta padrão do NGINX)
+    ports:
+      - "9000:80"
+    # define a network docker que o container fará parte
+    networks: 
+      - observabilidade
+
+  # nome do serviço do banco de dados
+  db:
+    # imagem do PostgreSQL a ser utilizada
+    image: postgres:13-alpine
+    # nome do container do banco de dados
+    container_name: db
+    # volumes compartilhados entre a máquina local e o container do banco de dados
+    volumes:
+      - banco_de_dados:/var/lib/postgresql/data/  # volume persistente para os dados do banco
+    # variáveis de ambiente para configurar o banco de dados
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}  # usuário do banco de dados PostgreSQL
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}  # senha do banco de dados PostgreSQL
+      - POSTGRES_DB=${POSTGRES_DB}  # nome do banco de dados PostgreSQL
+    # mapeamento de portas: expõe a porta 5433 da máquina local para a porta 5432 do container (porta padrão do PostgreSQL)
+    ports:
+      - "5433:5432"
+    # política de reinicialização do container do banco de dados
+    restart: always
+    # configuração de healthcheck para verificar se o banco está pronto para aceitar conexões
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 10s  # intervalo entre as verificações
+      timeout: 3s    # tempo limite para a resposta do healthcheck
+      retries: 3     # número de tentativas antes de marcar o container como não saudável
+    # define a network docker que o container fará parte
+    networks:
+      - observabilidade
+
+# volumes docker a serem criados
+volumes:
+  # volume para as dependências do frontend (node_modules)
+  dependencias_frontend:
+  # volume para os dados do banco de dados PostgreSQL
+  banco_de_dados:
+
+# declaração da network docker
+networks:
+  # nome da network "observabilidade", que deve existir externamente
+  observabilidade:
+    external: true

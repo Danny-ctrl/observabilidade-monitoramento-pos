@@ -1,0 +1,34 @@
+# ============================== Configuração do Heartbeat ==============================
+
+# Configure os monitores do Heartbeat para verificar a disponibilidade dos seus serviços.
+
+heartbeat.monitors:
+  # Monitor HTTP
+  - type: http
+    schedule: "@every 5s" # Define a frequência das verificações (a cada 5 segundos)
+    urls:
+      - http://elasticsearch:9200 # URL para monitorar o serviço Elasticsearch
+      - http://kibana:5601 # URL para monitorar o serviço Kibana
+      - http://app:8000 # URL para monitorar o serviço da aplicação
+
+  # Monitor ICMP
+  - type: icmp
+    schedule: "@every 5s" # Define a frequência das verificações (a cada 5 segundos)
+    hosts:
+      - elasticsearch # Host para enviar pings ao serviço Elasticsearch
+      - kibana # Host para enviar pings ao serviço Kibana
+      - apm # Host para enviar pings ao serviço APM
+      - metricbeat # Host para enviar pings ao serviço Metricbeat
+
+# Os processadores são usados para modificar ou enriquecer os dados antes de enviá-los para o output.
+processors:
+  - add_cloud_metadata: ~ # Adiciona metadados de nuvem aos eventos (útil se estiver executando em um ambiente de nuvem)
+
+# ============================== Configuração do Output ==============================
+
+# Configure o output para o Elasticsearch, onde os dados serão enviados.
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"] # URL da instância Elasticsearch
+  username: "elastic" # Nome de usuário para autenticação com o Elasticsearch
+  password: "changeme" # Senha para autenticação com o Elasticsearch

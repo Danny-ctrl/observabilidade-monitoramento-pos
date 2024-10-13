@@ -1,0 +1,23 @@
+name: Contagem usuários online # Nome da regra de alerta.
+type: any # Tipo de dados a serem monitorados
+index: apm-* # Índice do Elasticsearch onde os dados estão armazenados. O '*' indica que se aplica a todos os índices que começam com 'apm-'.
+filter:
+  - query:
+      query_string:
+        query: "online_users:[5 TO *]" # Filtro para encontrar documentos onde a contagem de usuários online é maior ou igual a 5.
+realert:
+  seconds: 30 # Intervalo de tempo para reavaliar o alerta se ele ainda estiver ativo. Aqui, é de 30 segundos.
+alert_text: |
+  -------------  ALERT -------------
+  A quantidade de usuários tá maior que 5:
+    Timestamp: {0}
+    Quantidade de usuários online: {1}
+
+alert_text_args: ["@timestamp", "online_users"] # Argumentos a serem usados no texto do alerta. Ordem correspondente ao texto acima.
+alert:
+  - "slack" # Tipo de alerta. Aqui, será enviado um alerta para o Slack.
+slack_webhook_url: "ADICIONE_AQUI_O_WEBHOOK_DO_APP_SLACK" # URL do webhook do Slack onde a mensagem será enviada. Substitua pelo seu webhook.
+slack_channel_override: "#aula-de-observabilidade" # Canal do Slack onde a mensagem será postada. Substitua pelo canal desejado.
+slack_msg_color: "warning" # Cor da mensagem no Slack. Pode ser 'danger', 'warning', ou 'good'.
+slack_parse_override: "none" # Formatação da mensagem no Slack. 'none' mantém o texto simples.
+slack_username_override: "elastalert" # Nome de usuário que aparecerá no Slack. Pode ser alterado conforme necessário.

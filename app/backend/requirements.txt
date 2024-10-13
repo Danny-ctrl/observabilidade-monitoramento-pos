@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+elastic-apm
+pydantic==1.10.11
+psycopg2-binary
+passlib
+sqlalchemy

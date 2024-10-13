@@ -1,0 +1,16 @@
+rules_folder: /opt/elastalert/rules # Diretório onde as regras do ElastAlert estão localizadas. Certifique-se de que este caminho corresponda à sua configuração.
+
+run_every:
+  seconds: 10 # Intervalo de tempo para o ElastAlert verificar as regras e consultar os dados. Aqui, está configurado para verificar a cada 10 segundos.
+
+buffer_time:
+  minutes: 15 # Tempo de buffer antes de processar os dados. Isso permite que novos dados sejam incluídos antes de aplicar as regras. Aqui, é configurado para 15 minutos.
+
+es_host: elasticsearch # Host do Elasticsearch onde os dados são armazenados. 'elasticsearch' é o nome do serviço ou o endereço IP do servidor Elasticsearch.
+
+es_port: 9200 # Porta do Elasticsearch. A porta padrão é 9200, mas deve ser ajustada se você estiver usando uma configuração diferente.
+
+writeback_index: elastalert_status # Índice onde o ElastAlert grava o status dos alertas. Pode ser útil para rastrear quais alertas foram acionados e quando.
+
+alert_time_limit:
+  days: 2 # Limite de tempo para a validade dos alertas. Aqui, os alertas são considerados válidos por até 2 dias antes de serem descartados ou limpos.
