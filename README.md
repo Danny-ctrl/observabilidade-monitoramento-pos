@@ -1,4 +1,4 @@
-# MBA USP Esalq - Observabilidade e Monitoramento
+# Observabilidade e Monitoramento
 
 ### Subindo o Ambiente do Elastic Stack ELK
 
